@@ -3,18 +3,21 @@ import { sql } from '../config/db.js';
 
 const router = express.Router()
 
+// GET all transactions for a user
 router.get("/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
     const transactions = await sql`
-      SELECT * FROM transactions WHERE user_id = ${userId} ORDER BY created_at DESC
+      SELECT * FROM transactions 
+      WHERE user_id = ${userId} 
+      ORDER BY created_at DESC
     `;
 
     res.status(200).json(transactions);
   } catch (error) {
-    console.log('Error getting the Transactions', error);
-    res.status(500).json({ message: 'Internal Server error' });
+    console.error('Error getting transactions:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
@@ -33,65 +36,77 @@ router.post('/', async (req, res) => {
       RETURNING *
     `;
 
-    console.log(transaction);
     res.status(201).json(transaction);
   } catch (error) {
-    console.log('Error creating Transaction', error);
-    res.status(500).json({ message: 'Internal Server error' });
+    console.error('Error creating transaction:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 
-//DELETE user Transaction
-router.delete("/:id", async(req,res)=>{
+// DELETE a transaction
+router.delete("/:id", async (req, res) => {
   try {
-    const {id} = req.params;
+    const { id } = req.params;
     
-    if(isNaN(parseInt(id))) {
-      return res.status(400).json({message: "Transaction Not Found"})
+    if (isNaN(parseInt(id))) {
+      return res.status(400).json({ message: "Invalid transaction ID" });
     }
 
-    const result = await sql `
-    DELETE FROM transactions WHERE id = ${id} RETURNING *
-    `
+    const result = await sql`
+      DELETE FROM transactions 
+      WHERE id = ${id} 
+      RETURNING *
+    `;
 
-    if(result.length === 0){
-      return res.status(404).json({message: "Transaction not found"})
-    } else{
-      res.status(200).json({message: "Transaction Deleted Successfully"})
+    if (result.length === 0) {
+      return res.status(404).json({ message: "Transaction not found" });
     }
+
+    res.status(200).json({ message: "Transaction deleted successfully" });
   } catch (error) {
-   console.log('Error deleting Transaction', error);
-    res.status(500).json({ message: 'Internal Server error' }); 
+    console.error('Error deleting transaction:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
-})
+});
 
-router.get("/summary/:userId", async(req, res) =>{
+// GET financial summary
+router.get("/summary/:userId", async (req, res) => {
   try {
-    const {userId} = req.params;
+    const { userId } = req.params;
 
-    const balanceResult = await sql
-    `
-    SELECT COALESCE(SUM(amount),0) as balance FROM  transactions WHERE user_id = ${userId}
-    `
+    const [balanceResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS balance 
+      FROM transactions 
+      WHERE user_id = ${userId}
+    `;
 
-    const incomeResult = await sql `
-    SELECT COALESCE(SUM(amount),0) as income FROM  transactions WHERE user_id = ${userId} AND amount > 0
-    `
+    const [incomeResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS income 
+      FROM transactions 
+      WHERE user_id = ${userId} AND amount > 0
+    `;
 
-     const expensesResult = await sql `
-    SELECT COALESCE(SUM(amount),0) as wxpense FROM  transactions WHERE user_id = ${userId} AND amount < 0
-    `
+    const [expensesResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS expenses 
+      FROM transactions 
+      WHERE user_id = ${userId} AND amount < 0
+    `;
 
     res.status(200).json({
-      balance: balanceResult[0].balance,
-       income: incomeResult[0].income,
-        expenses: expensesResult[0].expenses,
-    })
+      balance: balanceResult?.balance || 0,
+      income: incomeResult?.income || 0,
+      expenses: expensesResult?.expenses || 0,
+    });
 
   } catch (error) {
-   console.log('Error Getting Summary Transactions', error);
-    res.status(500).json({ message: 'Internal Server error' });  
+    console.error("Error fetching summary:", error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      balance: 0,
+      income: 0,
+      expenses: 0
+    });
   }
-})
+});
 
 export default router;

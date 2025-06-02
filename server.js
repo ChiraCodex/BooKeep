@@ -3,13 +3,15 @@ import dotenv from 'dotenv';
 import { sql } from './config/db.js';
 import ratelimit from './middleware/rateLimiter.js';
 import transactionsRoute from './routes/transactionRoutes.js'
-
+import cors from 'cors';
 dotenv.config();
 
 const app = express();
 //middleware
 app.use(ratelimit)
 app.use(express.json());
+
+app.use(cors()); 
 
 const PORT = process.env.PORT || 5001;
 
