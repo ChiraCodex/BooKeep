@@ -11,17 +11,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// ✅ Fix CORS: allow from all origins or restrict as needed
-app.use(cors()); // For dev: allow all. For prod, pass options.
 
-app.use(express.json());     // Parse incoming JSON
-app.use(ratelimit);          // Apply rate limiting (after CORS & JSON)
+app.use(cors());
+
+app.use(express.json());    
+app.use(ratelimit);         
 
 // ✅ Routes
-app.use('/api/transactions', transactionsRoute);
-app.use('/api/summary', summaryRoute); // Mount summary route correctly
+app.use('/transactions', transactionsRoute);
+app.use('/summary', summaryRoute); 
 
-// ✅ Initialize DB
+
 async function initDB() {
   try {
     await sql`
@@ -44,6 +44,6 @@ async function initDB() {
 // ✅ Start server
 initDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on PORT: ${PORT}`);
+    console.log(`Server running on PORT: ${PORT}`);
   });
 });

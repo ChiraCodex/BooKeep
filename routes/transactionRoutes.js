@@ -3,6 +3,46 @@ import { sql } from '../config/db.js';
 
 const router = express.Router()
 
+
+router.get("/summary/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const [balanceResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS balance 
+      FROM transactions 
+      WHERE user_id = ${userId}
+    `;
+
+    const [incomeResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS income 
+      FROM transactions 
+      WHERE user_id = ${userId} AND amount > 0
+    `;
+
+    const [expensesResult] = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS expenses 
+      FROM transactions 
+      WHERE user_id = ${userId} AND amount < 0
+    `;
+
+    res.status(200).json({
+      balance: balanceResult?.balance || 0,
+      income: incomeResult?.income || 0,
+      expenses: expensesResult?.expenses || 0,
+    });
+
+  } catch (error) {
+    console.error("Error fetching summary:", error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      balance: 0,
+      income: 0,
+      expenses: 0
+    });
+  }
+});
+
 // GET all transactions for a user
 router.get("/:userId", async (req, res) => {
   try {
@@ -66,46 +106,6 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     console.error('Error deleting transaction:', error);
     res.status(500).json({ message: 'Internal Server Error' });
-  }
-});
-
-// GET financial summary
-router.get("/summary/:userId", async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    const [balanceResult] = await sql`
-      SELECT COALESCE(SUM(amount), 0) AS balance 
-      FROM transactions 
-      WHERE user_id = ${userId}
-    `;
-
-    const [incomeResult] = await sql`
-      SELECT COALESCE(SUM(amount), 0) AS income 
-      FROM transactions 
-      WHERE user_id = ${userId} AND amount > 0
-    `;
-
-    const [expensesResult] = await sql`
-      SELECT COALESCE(SUM(amount), 0) AS expenses 
-      FROM transactions 
-      WHERE user_id = ${userId} AND amount < 0
-    `;
-
-    res.status(200).json({
-      balance: balanceResult?.balance || 0,
-      income: incomeResult?.income || 0,
-      expenses: expensesResult?.expenses || 0,
-    });
-
-  } catch (error) {
-    console.error("Error fetching summary:", error);
-    res.status(500).json({ 
-      message: "Internal server error",
-      balance: 0,
-      income: 0,
-      expenses: 0
-    });
   }
 });
 

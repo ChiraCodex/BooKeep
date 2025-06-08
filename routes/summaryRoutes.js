@@ -5,30 +5,31 @@ const router = express.Router();
 
 router.get('/:userId', async (req, res) => {
   const { userId } = req.params;
-
   try {
-    const transactions = await sql`
-      SELECT * FROM transactions WHERE user_id = ${userId}
+    const incomeResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS income
+      FROM transactions
+      WHERE user_id = ${userId} AND amount > 0
+    `;
+    const expensesResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS expenses
+      FROM transactions
+      WHERE user_id = ${userId} AND amount < 0
+    `;
+    const balanceResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) AS balance
+      FROM transactions
+      WHERE user_id = ${userId}
     `;
 
-    const income = transactions
-      .filter(t => Number(t.amount) > 0)
-      .reduce((acc, t) => acc + Number(t.amount), 0);
-
-    const expenses = transactions
-      .filter(t => Number(t.amount) < 0)
-      .reduce((acc, t) => acc + Number(t.amount), 0);
-
-    const balance = income + expenses;
-
     res.json({
-      income,
-      expenses,
-      balance
+      income: Number(incomeResult[0].income),
+      expenses: Number(expensesResult[0].expenses),
+      balance: Number(balanceResult[0].balance),
     });
-  } catch (err) {
-    console.error('Error fetching summary:', err);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
